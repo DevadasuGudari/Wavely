@@ -10,7 +10,7 @@
 
 <p align="center"><strong>Spotify-inspired frontend clone with skeleton loading &amp; live search — HTML, CSS, Bootstrap, vanilla JS.</strong></p>
 
-> ⚠️ Educational practice project. Not affiliated with Spotify AB. **No audio plays**: the player is a visual simulation.
+> ⚠️ Educational practice project. Not affiliated with Spotify AB. Songs and 30-second previews come from the free iTunes Search and Deezer APIs.
 
 ---
 
@@ -21,10 +21,12 @@
 | 📱 Responsive layout | Bootstrap 5 grid, collapsing navbar, mobile player bar |
 | 🦴 Skeleton loading | Shimmer placeholders for ~1.5 s before content appears |
 | 🔎 Live search | Filters songs, artists and playlists as you type (Esc clears) |
-| 🎧 Simulated player | Play/pause, next/previous, shuffle, repeat, seek and a running timer, with no sound |
+| 🌐 API songs | Songs, artwork and artists in 20 languages are fetched live from the iTunes Search API, with Deezer as a backup (no keys needed) |
+| 🗣️ Language filters | Browse songs and artists by language: Hindi, Telugu, Tamil, Malayalam, Kannada, Punjabi, Bengali, Marathi, English, Spanish, Portuguese, French, German, Italian, Korean, Japanese, Chinese, Arabic, Turkish and Russian |
+| 🎧 Audio player | Real playback of 30-second previews: play/pause, next/previous, shuffle, repeat, seek and volume |
 | ❤️ Liked songs | Heart any song; saved in `localStorage` |
 | 👤 Follow artists | Follow/unfollow with a saved list |
-| 🎭 Genre browsing | Genre tiles and chips filter the song list |
+| 🎭 Language browsing | Language tiles and chips filter songs and artists |
 | 📚 Your library | Tabs for liked songs, recently played, following and playlists |
 | 🔐 Auth UI | Login and signup with Bootstrap form validation (no real auth) |
 | 💳 Plans section | Free / Individual / Family demo cards |
@@ -46,10 +48,10 @@ wavely/
 ├── index.html  browse.html  artists.html  library.html
 ├── login.html  signup.html
 ├── style.css    → all custom styling
-└── script.js    → data, rendering, skeletons, search, likes, simulated player
+└── script.js    → API fetch, rendering, skeletons, search, likes, audio player
 ```
 
-The navbar, footer and player are injected by `script.js`, so they are defined once and shared by every page. All songs, artists and playlists live in arrays at the top of `script.js`.
+The navbar, footer and player are injected by `script.js`, so they are defined once and shared by every page. To add or change a language, edit the `LANGS` list at the top of `script.js` (name, color, search term, store country).
 
 ## 🚀 Run locally
 
@@ -61,13 +63,15 @@ python3 -m http.server 8000
 
 ## ⚠️ Known limitations
 
-- No real audio, backend or authentication.
-- Data is hardcoded; likes, follows and the demo login are stored only in this browser.
-- Cover images come from [Lorem Picsum](https://picsum.photos/) and need an internet connection.
+- The API only provides 30-second previews, not full songs.
+- Playback stops when you open another page (each page is separate).
+- No backend or real authentication; likes, follows and the demo login are stored only in this browser.
+- Needs an internet connection to load songs. Results are cached in the browser for 12 hours.
+- Search results for a language come from keyword searches, so a few songs may be in another language.
 
 ## 🔮 Future improvements
 
-Real audio playback, a music API, user playlists, artist and album detail pages, and a backend with a database.
+Full-length tracks (for example a licensed API), user playlists, artist and album detail pages, and a backend with a database.
 
 ## 👨‍💻 Author
 

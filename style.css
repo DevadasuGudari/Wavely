@@ -121,3 +121,4 @@ input[type=range] { accent-color: var(--accent); }
 .wv-auth-box .form-control:focus { background: #292d37; box-shadow: 0 0 0 2px var(--accent); }
 .wv-auth-box .form-check-input:checked { background-color: var(--accent); border-color: var(--accent); }
 @media (max-width: 480px) { .wv-auth-box { padding: 28px 22px; } }
+.hero-card img { background: var(--s2); min-height: 120px; }

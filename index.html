@@ -19,15 +19,15 @@
           <h1>Music for every mood.</h1>
           <p class="lead text-secondary col-lg-9">Browse songs, follow artists and build your own list of favorites. Free to explore, no ads.</p>
           <div class="d-flex flex-wrap gap-2 mt-4">
-            <button class="btn btn-accent btn-lg" data-play="0">Start listening</button>
+            <button class="btn btn-accent btn-lg" id="heroPlay" data-play="">Start listening</button>
             <a href="./browse.html" class="btn btn-outline-light btn-lg rounded-pill px-4">Browse genres</a>
           </div>
         </div>
         <div class="col-lg-5">
-          <div class="hero-card" data-play="0" role="button" tabindex="0">
-            <img src="https://picsum.photos/seed/MidnightDrive/400/400" alt="Midnight Drive cover">
+          <div class="hero-card" id="heroCard" data-play="" role="button" tabindex="0">
+            <img id="heroImg" alt="Featured track cover">
             <div class="mt-3"><small class="text-secondary">Featured track</small>
-              <h2 class="h4 mb-0">Midnight Drive</h2><span class="text-secondary">Nova Kane</span></div>
+              <h2 class="h4 mb-0" id="heroTitle">Loading...</h2><span class="text-secondary" id="heroArtist"></span></div>
           </div>
         </div>
       </div>
@@ -39,7 +39,7 @@
       <h2 class="section-title">Popular right now</h2>
       <div class="chips" data-render="chips" data-instant></div>
     </div>
-    <div class="row g-3" data-render="songs" data-kind="card" data-skel="12" data-genre-scope></div>
+    <div class="row g-3" data-render="songs" data-kind="card" data-skel="12" data-lang-scope></div>
   </section>
 
   <section class="block container-fluid px-3 px-lg-5" data-block>
@@ -47,7 +47,7 @@
       <h2 class="section-title">Top artists</h2>
       <a href="./artists.html" class="see-all">See all</a>
     </div>
-    <div class="row g-3" data-render="artists" data-kind="card" data-skel="6"></div>
+    <div class="row g-3" data-render="artistsTop" data-kind="card" data-skel="6"></div>
   </section>
 
   <section class="block container-fluid px-3 px-lg-5" data-block>
@@ -59,7 +59,7 @@
     <h2 class="section-title mb-3">New releases</h2>
     <div class="table-responsive">
       <table class="table song-table align-middle">
-        <thead><tr><th class="num">#</th><th>Title</th><th class="d-none d-md-table-cell">Genre</th><th class="text-end">Length</th></tr></thead>
+        <thead><tr><th class="num">#</th><th>Title</th><th class="d-none d-md-table-cell">Language</th><th class="text-end">Length</th></tr></thead>
         <tbody data-render="new" data-kind="row" data-skel="6"></tbody>
       </table>
     </div>

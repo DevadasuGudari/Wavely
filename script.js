@@ -1,37 +1,101 @@
 /* WAVELY shared script
-   Data, page rendering, skeleton loading, live search, likes/follows,
-   and a SIMULATED player (a timer drives the progress bar; no audio plays). */
+   Songs from 20 languages are fetched from the iTunes Search API (Deezer as a backup).
+   Both give free 30-second previews and need no API key.
+   Also handles rendering, skeleton loading, live search, likes/follows and the audio player. */
 
-/* ---------- Data ---------- */
-const img = (s, n) => `https://picsum.photos/seed/${s.replace(/\W/g, '')}/${n}/${n}`;
+/* ---------- Languages: [name, color, search term, iTunes country] ---------- */
+const LANGS = [
+  ["Hindi", "#e8115b", "bollywood hits", "IN"], ["Telugu", "#af2896", "telugu hits", "IN"],
+  ["Tamil", "#e13300", "tamil hits", "IN"], ["Malayalam", "#1e3264", "malayalam hits", "IN"],
+  ["Kannada", "#8d67ab", "kannada hits", "IN"], ["Punjabi", "#477d95", "punjabi hits", "IN"],
+  ["Bengali", "#509bf5", "bengali songs", "IN"], ["Marathi", "#608108", "marathi songs", "IN"],
+  ["English", "#0d73ec", "top hits", "US"], ["Spanish", "#c2410c", "reggaeton", "MX"],
+  ["Portuguese", "#0f766e", "brazilian hits", "BR"], ["French", "#7c3aed", "chanson francaise", "FR"],
+  ["German", "#b45309", "deutsch pop", "DE"], ["Italian", "#be123c", "italian pop", "IT"],
+  ["Korean", "#db2777", "k-pop", "KR"], ["Japanese", "#4f46e5", "j-pop", "JP"],
+  ["Chinese", "#b91c1c", "mandopop", "TW"], ["Arabic", "#15803d", "arabic pop", "AE"],
+  ["Turkish", "#0369a1", "turkish pop", "TR"], ["Russian", "#6d28d9", "russian pop", "RU"]
+];
+const PL_DEFS = [
+  ["Bollywood Hits", "Hindi chart-toppers and dance numbers", "Hindi"],
+  ["Telugu Hits", "Tollywood favorites", "Telugu"],
+  ["Tamil Hits", "Kollywood favorites", "Tamil"],
+  ["English Top Hits", "Pop, rock and more", "English"],
+  ["Latin Heat", "Spanish and Latin beats", "Spanish"],
+  ["K-Pop Wave", "Korean pop essentials", "Korean"]
+];
 
-const GENRES = [["Pop", "#e8115b"], ["Hip-Hop", "#8d67ab"], ["Rock", "#e13300"], ["Electronic", "#1e3264"],
-["Chill", "#477d95"], ["Jazz", "#af2896"], ["Indie", "#509bf5"], ["Classical", "#608108"]];
+let SONGS = [], MIX = [], ARTISTS = [], PLAYLISTS = [];
+const BY = {}, ARB = {};
 
-const SONGS = [
-  ["Midnight Drive", "Nova Kane", "Electronic", 214], ["Neon Rain", "Lumen", "Pop", 187],
-  ["Paper Moon", "Ivy Rowe", "Indie", 203], ["Afterglow", "The Hollows", "Rock", 241],
-  ["Redline", "Static Bloom", "Rock", 196], ["Harbor Lights", "Mira Vale", "Chill", 228],
-  ["Dead Reckoning", "Kite & Co", "Hip-Hop", 175], ["Slow Orbit", "Juno Park", "Chill", 252],
-  ["Velvet Hours", "Sable Quartet", "Jazz", 263], ["Glass Garden", "Ivy Rowe", "Indie", 190],
-  ["Wire & Wonder", "Lumen", "Electronic", 208], ["Clair de Nuit", "Elena Moreau", "Classical", 279],
-  ["City Lights Hum", "Nova Kane", "Pop", 181], ["Low Tide", "Mira Vale", "Chill", 234],
-  ["Backroads", "The Hollows", "Rock", 219], ["Night Shift", "Kite & Co", "Hip-Hop", 192]
-].map(([title, artist, genre, dur], id) => ({ id, title, artist, genre, dur, cover: img(title, 400) }));
+function build(list) {
+  SONGS = list;
+  list.forEach((s) => { BY[s.id] = s; });
+  // MIX = songs from all languages interleaved, so the first few cards show every language
+  const groups = LANGS.map(([n]) => list.filter((s) => s.lang === n));
+  MIX = [];
+  for (let i = 0; i < Math.max(...groups.map((g) => g.length)); i++) groups.forEach((g) => g[i] && MIX.push(g[i]));
+  const map = new Map();
+  MIX.forEach((s) => {
+    if (!map.has(s.artistId)) map.set(s.artistId, { id: s.artistId, name: s.artist, lang: s.lang, n: 0, img: s.cover });
+    map.get(s.artistId).n++;
+  });
+  ARTISTS = [...map.values()];
+  ARTISTS.forEach((a) => { ARB[a.id] = a; });
+  PLAYLISTS = PL_DEFS.map(([name, desc, lang], i) => {
+    const ids = list.filter((s) => s.lang === lang).slice(0, 10).map((s) => s.id);
+    return { i, name, desc, ids, cover: ids.length ? BY[ids[0]].cover : '' };
+  }).filter((p) => p.ids.length);
+}
 
-const ARTISTS = [["Nova Kane", "Electronic", 482], ["Lumen", "Pop", 1260], ["Ivy Rowe", "Indie", 310],
-["The Hollows", "Rock", 905], ["Static Bloom", "Rock", 274], ["Mira Vale", "Chill", 668],
-["Kite & Co", "Hip-Hop", 1530], ["Juno Park", "Chill", 198], ["Sable Quartet", "Jazz", 142],
-["Elena Moreau", "Classical", 356]].map(([name, genre, f], id) => ({ id, name, genre, f, img: img(name, 400) }));
+/* ---------- API calls ---------- */
+const fromItunes = async ([lang, , term, cc]) => {
+  const r = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(term)}&country=${cc}&media=music&entity=song&limit=8`);
+  if (!r.ok) throw new Error('iTunes error');
+  const j = await r.json();
+  return j.results.filter((t) => t.previewUrl).map((t) => ({
+    id: String(t.trackId), title: t.trackName, artist: t.artistName, artistId: String(t.artistId), lang,
+    genre: t.primaryGenreName, dur: Math.round(t.trackTimeMillis / 1000), preview: t.previewUrl,
+    cover: t.artworkUrl100.replace('100x100', '400x400')
+  }));
+};
 
-const PLAYLISTS = [
-  ["Late Night Drive", "Synths and slow beats for empty roads", [0, 10, 7, 5]],
-  ["Focus Flow", "Calm tracks to get work done", [5, 7, 13, 11]],
-  ["Indie Mornings", "Soft guitars to start the day", [2, 9, 3]],
-  ["Rock Essentials", "Loud, live and unforgettable", [3, 4, 14]],
-  ["Hip-Hop Heat", "Fresh bars and heavy bass", [6, 15, 12]],
-  ["Jazz & Wine", "Dinner music for slow evenings", [8, 11, 13]]
-].map(([name, desc, ids], i) => ({ i, name, desc, ids, cover: img(name, 400) }));
+const jsonp = (url) => new Promise((res, rej) => {
+  const cb = 'wv' + Math.random().toString(36).slice(2), tag = document.createElement('script');
+  const done = () => { tag.remove(); delete window[cb]; };
+  window[cb] = (d) => { res(d); done(); };
+  tag.onerror = () => { rej(new Error('jsonp')); done(); };
+  tag.src = `${url}&output=jsonp&callback=${cb}`;
+  document.head.append(tag);
+  setTimeout(() => rej(new Error('timeout')), 8000);
+});
+
+const fromDeezer = async ([lang, , term]) => {
+  const j = await jsonp(`https://api.deezer.com/search?q=${encodeURIComponent(term)}&limit=8`);
+  return (j.data || []).filter((t) => t.preview).map((t) => ({
+    id: 'dz' + t.id, title: t.title, artist: t.artist.name, artistId: 'dz' + t.artist.id, lang,
+    genre: 'Music', dur: t.duration, preview: t.preview, cover: t.album.cover_big || t.album.cover_medium
+  }));
+};
+
+const fetchLang = async (l) => {
+  try { const r = await fromItunes(l); if (r.length) return r; } catch { /* try the backup API */ }
+  try { return await fromDeezer(l); } catch { return []; }
+};
+
+const CACHE = 'wv_data_v3';
+async function loadData() {
+  try {
+    const c = JSON.parse(localStorage.getItem(CACHE));
+    if (c && Date.now() - c.t < 12 * 3600e3) return build(c.list);
+  } catch { /* no cache */ }
+  const all = (await Promise.all(LANGS.map(fetchLang))).flat();
+  const seen = new Set();
+  const list = all.filter((s) => !seen.has(s.id) && seen.add(s.id));
+  if (!list.length) throw new Error('No songs');
+  try { localStorage.setItem(CACHE, JSON.stringify({ t: Date.now(), list })); } catch { /* storage full */ }
+  build(list);
+}
 
 /* ---------- State ---------- */
 const store = {
@@ -39,11 +103,14 @@ const store = {
   set: (k, v) => localStorage.setItem('wv_' + k, JSON.stringify(v))
 };
 const S = {
-  q: '', genre: 'All', queue: null, t: 0, playing: false, shuffle: false, repeat: false,
-  liked: store.get('liked', []), follow: store.get('follow', []),
-  recent: store.get('recent', []), now: store.get('now', null)
+  q: '', lang: 'All', queue: null, t: 0, playing: false, shuffle: false, repeat: false,
+  liked: store.get('liked', []).map(String), follow: store.get('follow', []).map(String),
+  recent: store.get('recent', []).map(String), now: store.get('now', null) === null ? null : String(store.get('now', null))
 };
-let timer;
+const audio = new Audio();
+audio.volume = 0.7;
+audio.preload = 'auto';
+let fails = 0;
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
@@ -53,49 +120,52 @@ const user = store.get('user', null);
 /* ---------- Templates ---------- */
 const COL = 'col-6 col-md-4 col-lg-3 col-xl-2';
 const heart = (id) => `<button class="icon-btn heart ${S.liked.includes(id) ? 'on' : ''}" data-like="${id}" aria-label="Like song">&#9829;</button>`;
-const key = (...a) => a.join(' ').toLowerCase();
+const key = (...a) => a.join(' ').toLowerCase().replace(/"/g, '');
+const esc = (t) => String(t).replace(/"/g, '&quot;');
 
-const card = (s) => `<div class="${COL}" data-q="${key(s.title, s.artist, s.genre)}" data-genre="${s.genre}">
+const card = (s) => `<div class="${COL}" data-q="${key(s.title, s.artist, s.lang, s.genre)}" data-lang="${s.lang}">
   <article class="song-card ${S.now === s.id ? 'playing' : ''}" data-play="${s.id}">
-    <div class="cover"><img src="${s.cover}" alt="${s.title} cover" loading="lazy">
-      <button class="play-fab" aria-label="Play ${s.title}">&#9654;</button>${heart(s.id)}</div>
+    <div class="cover"><img src="${s.cover}" alt="${esc(s.title)} cover" loading="lazy">
+      <button class="play-fab" aria-label="Play ${esc(s.title)}">&#9654;</button>${heart(s.id)}</div>
     <h3>${s.title}</h3><p>${s.artist}</p></article></div>`;
 
-const row = (s, i) => `<tr class="${S.now === s.id ? 'playing' : ''}" data-play="${s.id}" data-q="${key(s.title, s.artist, s.genre)}" data-genre="${s.genre}">
+const row = (s, i) => `<tr class="${S.now === s.id ? 'playing' : ''}" data-play="${s.id}" data-q="${key(s.title, s.artist, s.lang, s.genre)}" data-lang="${s.lang}">
   <td class="num">${i + 1}</td>
   <td><div class="d-flex align-items-center gap-3"><img src="${s.cover}" alt="" loading="lazy">
     <div><div class="t">${s.title}</div><small>${s.artist}</small></div></div></td>
-  <td class="d-none d-md-table-cell text-secondary">${s.genre}</td>
+  <td class="d-none d-md-table-cell text-secondary">${s.lang}</td>
   <td class="text-end text-nowrap">${heart(s.id)} <span class="dur">${fmt(s.dur)}</span></td></tr>`;
 
 const artistCard = (a) => {
   const f = S.follow.includes(a.id);
-  return `<div class="${COL}" data-q="${key(a.name, a.genre)}">
-  <article class="artist-card"><img src="${a.img}" alt="${a.name}" loading="lazy">
-    <h3>${a.name}</h3><p>${a.genre} &bull; ${a.f}K followers</p>
+  return `<div class="${COL}" data-q="${key(a.name, a.lang)}" data-lang="${a.lang}">
+  <article class="artist-card"><img src="${a.img}" alt="${esc(a.name)}" loading="lazy">
+    <h3>${a.name}</h3><p>${a.lang} &bull; ${a.n} song${a.n > 1 ? 's' : ''}</p>
     <button class="btn btn-sm rounded-pill px-3 ${f ? 'btn-light' : 'btn-outline-light'}" data-follow="${a.id}">${f ? 'Following' : 'Follow'}</button>
   </article></div>`;
 };
 
 const playlistCard = (p) => `<div class="${COL}" data-q="${key(p.name, p.desc)}">
   <article class="song-card" data-play="${p.ids[0]}" data-pl="${p.i}">
-    <div class="cover"><img src="${p.cover}" alt="${p.name} cover" loading="lazy"><button class="play-fab" aria-label="Play ${p.name}">&#9654;</button></div>
+    <div class="cover"><img src="${p.cover}" alt="${esc(p.name)} cover" loading="lazy"><button class="play-fab" aria-label="Play ${esc(p.name)}">&#9654;</button></div>
     <h3>${p.name}</h3><p>${p.desc}</p></article></div>`;
 
-const tile = ([g, c]) => `<div class="col-6 col-md-4 col-lg-3"><button class="genre-tile" style="--c:${c}" data-genre-btn="${g}">
-  <span>${g}</span><small>${SONGS.filter((s) => s.genre === g).length} songs</small></button></div>`;
+const tile = ([g, c]) => `<div class="col-6 col-md-4 col-lg-3"><button class="genre-tile" style="--c:${c}" data-lang-btn="${g}">
+  <span>${g}</span><small>${SONGS.filter((s) => s.lang === g).length} songs</small></button></div>`;
 
 const empty = (msg, cols = 4) => `<tr><td colspan="${cols}" class="empty-state">${msg}</td></tr>`;
-const byIds = (ids) => ids.map((id) => SONGS[id]);
+const byIds = (ids) => ids.map((id) => BY[id]).filter(Boolean);
+const filtering = () => S.q || S.lang !== 'All';
 
 const R = {
-  chips: () => ['All', ...GENRES.map((g) => g[0])].map((g) => `<button class="chip ${S.genre === g ? 'active' : ''}" data-genre-btn="${g}">${g}</button>`).join(''),
-  songs: () => SONGS.map(card).join(''),
-  new: () => SONGS.slice(-8).reverse().map(row).join(''),
+  chips: () => ['All', ...LANGS.map((l) => l[0])].map((g) => `<button class="chip ${S.lang === g ? 'active' : ''}" data-lang-btn="${g}">${g}</button>`).join(''),
+  songs: () => (filtering() ? SONGS : MIX.slice(0, 24)).map(card).join(''),
+  new: () => MIX.slice(24, 32).map(row).join(''),
   all: () => SONGS.map(row).join(''),
   artists: () => ARTISTS.map(artistCard).join(''),
+  artistsTop: () => (S.q ? ARTISTS : ARTISTS.slice(0, 12)).map(artistCard).join(''),
   playlists: () => PLAYLISTS.map(playlistCard).join(''),
-  genres: () => GENRES.map(tile).join(''),
+  genres: () => LANGS.filter(([n]) => SONGS.some((s) => s.lang === n)).map(tile).join(''),
   liked: () => S.liked.length ? byIds(S.liked).map(row).join('') : empty('No liked songs yet. Tap the heart on any song to save it.'),
   recent: () => S.recent.length ? byIds(S.recent).map(row).join('') : empty('Nothing played yet. Press play on a song to start your history.'),
   following: () => S.follow.length ? ARTISTS.filter((a) => S.follow.includes(a.id)).map(artistCard).join('') : '<p class="empty-state col-12">You are not following anyone yet. Visit the Artists page to find someone.</p>'
@@ -113,20 +183,37 @@ function renderAll() {
   applyFilters();
 }
 
-function boot() {
+function showError() {
+  const msg = 'Could not load songs. Check your internet connection. <button class="btn btn-accent btn-sm ms-2" data-retry>Try again</button>';
+  $$('[data-render]:not([data-instant])').forEach((el) => {
+    el.innerHTML = el.tagName === 'TBODY' ? empty(msg) : `<p class="empty-state col-12">${msg}</p>`;
+  });
+}
+
+async function boot() {
   $$('[data-render]').forEach((el) => {
     el.innerHTML = el.hasAttribute('data-instant')
       ? R[el.dataset.render]()
       : Array(+el.dataset.skel || 6).fill(SK[el.dataset.kind || 'card']).join('');
   });
-  setTimeout(renderAll, 1500); // simulated loading time
+  try { await loadData(); } catch { return showError(); }
+  if (S.now !== null && !BY[S.now]) S.now = null;
+  renderAll(); hero(); ui();
+}
+
+function hero() {
+  const s = MIX[0], card = $('#heroCard');
+  if (!card || !s) return;
+  card.dataset.play = s.id; $('#heroPlay').dataset.play = s.id;
+  $('#heroImg').src = s.cover; $('#heroImg').alt = `${s.title} cover`;
+  $('#heroTitle').textContent = s.title; $('#heroArtist').textContent = s.artist;
 }
 
 function applyFilters() {
   let shown = 0, total = 0;
   $$('[data-q]').forEach((el) => {
-    const scoped = el.closest('[data-genre-scope]');
-    const ok = (!S.q || el.dataset.q.includes(S.q)) && (!scoped || S.genre === 'All' || el.dataset.genre === S.genre);
+    const scoped = el.closest('[data-lang-scope]');
+    const ok = (!S.q || el.dataset.q.includes(S.q)) && (!scoped || S.lang === 'All' || el.dataset.lang === S.lang);
     el.classList.toggle('d-none', !ok);
     total++; if (ok) shown++;
   });
@@ -140,7 +227,7 @@ function applyFilters() {
       b = document.createElement('div');
       b.id = 'empty';
       b.className = 'container text-center text-secondary py-5';
-      b.innerHTML = '<p class="h5 mb-1">No matches for &ldquo;<b></b>&rdquo;</p><p>Try a different song, artist or genre.</p>';
+      b.innerHTML = '<p class="h5 mb-1">No matches for &ldquo;<b></b>&rdquo;</p><p>Try a different song, artist or language.</p>';
       $('main').prepend(b);
     }
     $('b', b).textContent = S.q;
@@ -151,7 +238,7 @@ function applyFilters() {
 function toast(msg) {
   const t = $('#toast'); if (!t) return;
   t.textContent = msg; t.classList.add('show');
-  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 1800);
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2500);
 }
 
 function like(id) {
@@ -166,54 +253,65 @@ function follow(id) {
   const on = !S.follow.includes(id);
   S.follow = on ? [...S.follow, id] : S.follow.filter((x) => x !== id);
   store.set('follow', S.follow);
-  toast(on ? `Following ${ARTISTS[id].name}` : `Unfollowed ${ARTISTS[id].name}`);
+  toast(on ? `Following ${ARB[id].name}` : `Unfollowed ${ARB[id].name}`);
   renderAll();
 }
 
-/* ---------- Simulated player (no audio) ---------- */
+/* ---------- Audio player ---------- */
 const allIds = () => SONGS.map((s) => s.id);
 
 function play(id, queue) {
+  const s = BY[id]; if (!s) return;
   S.queue = queue || (S.queue && S.queue.includes(id) ? S.queue : allIds());
   S.now = id; S.t = 0;
   S.recent = [id, ...S.recent.filter((x) => x !== id)].slice(0, 12);
   store.set('recent', S.recent); store.set('now', id);
-  resume();
-}
-
-function resume() {
-  clearInterval(timer);
-  S.playing = true;
-  timer = setInterval(tick, 1000);
+  audio.src = s.preview;
+  audio.loop = S.repeat;
+  audio.play().catch((err) => {
+    if (err.name === 'NotAllowedError') toast('Your browser blocked autoplay. Press the play button.');
+  });
   ui(); renderAll();
 }
 
-function pause() { clearInterval(timer); S.playing = false; ui(); }
-const toggle = () => (S.now === null ? play(0) : S.playing ? pause() : resume());
-
-function tick() {
-  if (++S.t >= SONGS[S.now].dur) { if (S.repeat) S.t = 0; else return step(1); }
-  ui();
-}
+const toggle = () => {
+  if (S.now === null || !BY[S.now]) return play(allIds()[0]);
+  if (!audio.src) return play(S.now);
+  audio.paused ? audio.play().catch(() => { }) : audio.pause();
+};
 
 function step(d) {
-  const q = S.queue || allIds();
+  const q = (S.queue || allIds()).filter((id) => BY[id]);
+  if (!q.length) return;
   const next = S.shuffle ? q[Math.floor(Math.random() * q.length)] : q[(q.indexOf(S.now) + d + q.length) % q.length];
   play(next, q);
 }
 
+audio.onplay = () => { S.playing = true; ui(); };
+audio.onpause = () => { S.playing = false; ui(); };
+audio.onplaying = () => { fails = 0; };
+audio.onended = () => step(1);
+audio.ontimeupdate = () => { S.t = audio.currentTime; ui(); };
+audio.onloadedmetadata = () => ui();
+audio.onerror = () => {
+  if (!audio.getAttribute('src')) return;
+  console.error('Audio error', audio.error, audio.src);
+  if (++fails < 4) { toast('That preview could not play. Trying the next song...'); step(1); }
+  else toast('Audio is not available. Check your connection or ad blocker.');
+};
+
 function ui() {
   if (!$('#player')) return;
-  const s = SONGS[S.now];
+  const s = BY[S.now], d = audio.duration || 0;
   $('#pTitle').textContent = s ? s.title : 'Nothing playing';
   $('#pArtist').textContent = s ? s.artist : 'Choose a song to start';
   $('#pCover').hidden = !s;
   if (s) $('#pCover').src = s.cover;
   $('#pHeart').innerHTML = s ? heart(s.id) : '';
   $('#pPlay').innerHTML = S.playing ? ICON.pause : ICON.play;
-  $('#seek').value = s ? (S.t / s.dur) * 100 : 0;
+  $('#seek').value = s && d ? (S.t / d) * 100 : 0;
   $('#tNow').textContent = fmt(S.t);
-  $('#tEnd').textContent = fmt(s ? s.dur : 0);
+  $('#tEnd').textContent = fmt(d);
   $('#pShuf').classList.toggle('on', S.shuffle);
   $('#pRep').classList.toggle('on', S.repeat);
 }
@@ -242,18 +340,18 @@ function chrome() {
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#wvMenu" aria-label="Toggle menu"><span class="navbar-toggler-icon"></span></button>
     <div class="collapse navbar-collapse" id="wvMenu">
       <ul class="navbar-nav me-auto gap-lg-2">${links}</ul>
-      <input id="search" type="search" class="form-control wv-search me-lg-3 my-2 my-lg-0" placeholder="Search songs, artists, playlists" aria-label="Search">
+      <input id="search" type="search" class="form-control wv-search me-lg-3 my-2 my-lg-0" placeholder="Search songs, artists, languages" aria-label="Search">
       <div class="d-flex align-items-center gap-2">${auth}</div>
     </div></div></nav>`;
 
   const foot = $('#app-footer');
   if (foot) foot.outerHTML = `<footer class="wv-footer"><div class="container-fluid px-3 px-lg-5"><div class="row gy-4">
-    <div class="col-lg-4"><a class="wv-brand fs-4" href="./index.html">WAVELY</a><p class="mt-2 text-secondary small col-lg-9">Music for every mood. A frontend practice project built with HTML, CSS, Bootstrap and JavaScript.</p></div>
+    <div class="col-lg-4"><a class="wv-brand fs-4" href="./index.html">WAVELY</a><p class="mt-2 text-secondary small col-lg-9">Music for every mood, in every language. A frontend practice project built with HTML, CSS, Bootstrap and JavaScript.</p></div>
     <div class="col-6 col-lg-2"><h4>Explore</h4><a href="./index.html">Home</a><a href="./browse.html">Browse</a><a href="./artists.html">Artists</a></div>
     <div class="col-6 col-lg-2"><h4>Account</h4><a href="./library.html">Your library</a><a href="./login.html">Log in</a><a href="./signup.html">Sign up</a></div>
     <div class="col-6 col-lg-2"><h4>Company</h4><a href="#">About</a><a href="#">Jobs</a><a href="#">Press</a></div>
     <div class="col-6 col-lg-2"><h4>Help</h4><a href="#">Support</a><a href="#">Privacy</a><a href="#">Terms</a></div>
-  </div><p class="mt-5 mb-0 pt-3 border-top small text-secondary">Not affiliated with Spotify AB. Playback is simulated and no audio plays. &copy; 2026 WAVELY.</p></div></footer>`;
+  </div><p class="mt-5 mb-0 pt-3 border-top small text-secondary">Songs and 30-second previews come from the iTunes Search API and Deezer API. Not affiliated with Spotify AB. &copy; 2026 WAVELY.</p></div></footer>`;
 
   const pl = $('#app-player');
   if (pl) pl.outerHTML = `<div class="player" id="player">
@@ -273,30 +371,34 @@ function chrome() {
 function bind() {
   document.addEventListener('click', (e) => {
     let b;
-    if ((b = e.target.closest('[data-like]'))) return like(+b.dataset.like);
-    if ((b = e.target.closest('[data-follow]'))) return follow(+b.dataset.follow);
-    if ((b = e.target.closest('[data-genre-btn]'))) {
-      S.genre = b.dataset.genreBtn; renderAll();
+    if (e.target.closest('[data-retry]')) return boot();
+    if ((b = e.target.closest('[data-like]'))) return like(b.dataset.like);
+    if ((b = e.target.closest('[data-follow]'))) return follow(b.dataset.follow);
+    if ((b = e.target.closest('[data-lang-btn]'))) {
+      S.lang = b.dataset.langBtn; renderAll();
       if (page === 'browse') $('#songs-title')?.scrollIntoView({ behavior: 'smooth' });
       return;
     }
     if ((b = e.target.closest('[data-play]'))) {
-      const id = +b.dataset.play, pl = b.dataset.pl;
+      const id = b.dataset.play, pl = b.dataset.pl;
+      if (!BY[id]) return;
       if (id === S.now && pl === undefined) toggle(); else play(id, pl !== undefined ? PLAYLISTS[pl].ids : undefined);
     }
     if (e.target.closest('#logout')) { store.set('user', null); location.reload(); }
   });
 
-  $('#search')?.addEventListener('input', (e) => { S.q = e.target.value.trim().toLowerCase(); applyFilters(); });
-  $('#search')?.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.target.value = ''; S.q = ''; applyFilters(); } });
+  const search = $('#search');
+  search?.addEventListener('input', (e) => { S.q = e.target.value.trim().toLowerCase(); renderAll(); });
+  search?.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.target.value = ''; S.q = ''; renderAll(); } });
 
   if (!$('#player')) return;
   $('#pPlay').onclick = toggle;
-  $('#pNext').onclick = () => (S.now === null ? play(0) : step(1));
-  $('#pPrev').onclick = () => (S.now === null ? play(0) : S.t > 3 ? (S.t = 0, ui()) : step(-1));
+  $('#pNext').onclick = () => (S.now === null ? toggle() : step(1));
+  $('#pPrev').onclick = () => (S.now === null ? toggle() : audio.currentTime > 3 ? (audio.currentTime = 0) : step(-1));
   $('#pShuf').onclick = () => { S.shuffle = !S.shuffle; ui(); };
-  $('#pRep').onclick = () => { S.repeat = !S.repeat; ui(); };
-  $('#seek').oninput = (e) => { if (S.now !== null) { S.t = (e.target.value / 100) * SONGS[S.now].dur; ui(); } };
+  $('#pRep').onclick = () => { S.repeat = !S.repeat; audio.loop = S.repeat; ui(); };
+  $('#seek').oninput = (e) => { if (audio.duration) audio.currentTime = (e.target.value / 100) * audio.duration; };
+  $('#vol').oninput = (e) => { audio.volume = e.target.value / 100; };
 }
 
 /* ---------- Login / signup forms (no real auth) ---------- */
