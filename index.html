@@ -1,39 +1,96 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Wavely: stream songs, artists and playlists. A frontend practice project.">
   <title>WAVELY | Home</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./style.css">
 </head>
-<body>
-  <nav class="navbar navbar-dark fixed-top wv-nav px-3">
-    <a class="navbar-brand wv-brand" href="./index.html">WAVELY</a>
-    <input id="search" type="search" class="form-control wv-search" placeholder="Search songs or artists">
-    <div class="d-flex gap-2">
-      <a href="./index.html" class="btn btn-sm btn-light">Home</a>
-      <a href="./library.html" class="btn btn-sm btn-outline-light">Liked</a>
-      <a href="./login.html" class="btn btn-sm btn-outline-light">Log in</a>
+<body data-page="home">
+<div id="app-nav"></div>
+<main>
+  <header class="hero">
+    <div class="container-fluid px-3 px-lg-5">
+      <div class="row align-items-center g-5">
+        <div class="col-lg-7">
+          <h1>Music for every mood.</h1>
+          <p class="lead text-secondary col-lg-9">Browse songs, follow artists and build your own list of favorites. Free to explore, no ads.</p>
+          <div class="d-flex flex-wrap gap-2 mt-4">
+            <button class="btn btn-accent btn-lg" data-play="0">Start listening</button>
+            <a href="./browse.html" class="btn btn-outline-light btn-lg rounded-pill px-4">Browse genres</a>
+          </div>
+        </div>
+        <div class="col-lg-5">
+          <div class="hero-card" data-play="0" role="button" tabindex="0">
+            <img src="https://picsum.photos/seed/MidnightDrive/400/400" alt="Midnight Drive cover">
+            <div class="mt-3"><small class="text-secondary">Featured track</small>
+              <h2 class="h4 mb-0">Midnight Drive</h2><span class="text-secondary">Nova Kane</span></div>
+          </div>
+        </div>
+      </div>
     </div>
-  </nav>
+  </header>
 
-  <main class="container-fluid px-4 py-4">
-    <h1 class="h3 fw-bold mb-3">Good to see you</h1>
-    <div id="songs" class="row g-3"></div>
-  </main>
-
-  <div class="wv-player">
-    <div class="wv-now"><img id="pCover" src="" alt=""><div><b id="pTitle">Pick a song</b><br><small id="pArtist"></small></div></div>
-    <div class="wv-controls">
-      <button id="prev">&#9198;</button>
-      <button id="play">&#9654;</button>
-      <button id="next">&#9197;</button>
+  <section class="block container-fluid px-3 px-lg-5" data-block>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+      <h2 class="section-title">Popular right now</h2>
+      <div class="chips" data-render="chips" data-instant></div>
     </div>
-    <input id="bar" type="range" min="0" max="100" value="0">
-  </div>
+    <div class="row g-3" data-render="songs" data-kind="card" data-skel="12" data-genre-scope></div>
+  </section>
 
-  <audio id="audio"></audio>
-  <script src="./script.js"></script>
+  <section class="block container-fluid px-3 px-lg-5" data-block>
+    <div class="d-flex justify-content-between align-items-end mb-3">
+      <h2 class="section-title">Top artists</h2>
+      <a href="./artists.html" class="see-all">See all</a>
+    </div>
+    <div class="row g-3" data-render="artists" data-kind="card" data-skel="6"></div>
+  </section>
+
+  <section class="block container-fluid px-3 px-lg-5" data-block>
+    <h2 class="section-title mb-3">Made for you</h2>
+    <div class="row g-3" data-render="playlists" data-kind="card" data-skel="6"></div>
+  </section>
+
+  <section class="block container-fluid px-3 px-lg-5" data-block>
+    <h2 class="section-title mb-3">New releases</h2>
+    <div class="table-responsive">
+      <table class="table song-table align-middle">
+        <thead><tr><th class="num">#</th><th>Title</th><th class="d-none d-md-table-cell">Genre</th><th class="text-end">Length</th></tr></thead>
+        <tbody data-render="new" data-kind="row" data-skel="6"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="block container-fluid px-3 px-lg-5">
+    <h2 class="section-title mb-1">Pick a plan</h2>
+    <p class="text-secondary mb-4">Plans are for demonstration only. No payment is taken.</p>
+    <div class="row g-3">
+      <div class="col-md-4"><div class="plan h-100"><h3>Free</h3><p class="price">&#8377;0<small>/month</small></p>
+        <ul><li>Browse every song and artist</li><li>Like songs and follow artists</li><li>Shuffle play</li></ul>
+        <a href="./signup.html" class="btn btn-outline-light rounded-pill w-100">Sign up free</a></div></div>
+      <div class="col-md-4"><div class="plan featured h-100"><h3>Individual</h3><p class="price">&#8377;99<small>/month</small></p>
+        <ul><li>Everything in Free</li><li>Skip any track</li><li>Offline listening</li></ul>
+        <a href="./signup.html" class="btn btn-accent w-100">Choose Individual</a></div></div>
+      <div class="col-md-4"><div class="plan h-100"><h3>Family</h3><p class="price">&#8377;149<small>/month</small></p>
+        <ul><li>Up to 6 accounts</li><li>Separate libraries</li><li>Kid-safe mode</li></ul>
+        <a href="./signup.html" class="btn btn-outline-light rounded-pill w-100">Choose Family</a></div></div>
+    </div>
+  </section>
+
+  <section class="block container-fluid px-3 px-lg-5">
+    <div class="cta">
+      <div><h2 class="mb-1">Keep your favorites in one place</h2><p class="text-secondary mb-0">Create a free account and your liked songs follow you around.</p></div>
+      <div class="d-flex gap-2"><a href="./signup.html" class="btn btn-accent btn-lg">Sign up</a><a href="./login.html" class="btn btn-outline-light btn-lg rounded-pill px-4">Log in</a></div>
+    </div>
+  </section>
+</main>
+<div id="app-footer"></div>
+<div id="app-player"></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="./script.js"></script>
 </body>
 </html>
