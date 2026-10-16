@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WAVELY | Liked Songs</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <nav class="navbar navbar-dark fixed-top wv-nav px-3">
+    <a class="navbar-brand wv-brand" href="./index.html">WAVELY</a>
+    <input id="search" type="search" class="form-control wv-search" placeholder="Search songs or artists">
+    <div class="d-flex gap-2">
+      <a href="./index.html" class="btn btn-sm btn-light">Home</a>
+      <a href="./library.html" class="btn btn-sm btn-outline-light">Liked</a>
+      <a href="./login.html" class="btn btn-sm btn-outline-light">Log in</a>
+    </div>
+  </nav>
+
+  <main class="container-fluid px-4 py-4">
+    <h1 class="h3 fw-bold mb-3">Liked Songs</h1>
+    <div id="songs" data-liked="1" class="row g-3"></div>
+  </main>
+
+  <div class="wv-player">
+    <div class="wv-now"><img id="pCover" src="" alt=""><div><b id="pTitle">Pick a song</b><br><small id="pArtist"></small></div></div>
+    <div class="wv-controls">
+      <button id="prev">&#9198;</button>
+      <button id="play">&#9654;</button>
+      <button id="next">&#9197;</button>
+    </div>
+    <input id="bar" type="range" min="0" max="100" value="0">
+  </div>
+
+  <audio id="audio"></audio>
+  <script src="./script.js"></script>
+</body>
+</html>
